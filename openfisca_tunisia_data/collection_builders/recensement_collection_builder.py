@@ -37,34 +37,35 @@ openfisca_tunisia_data_location = pkg_resources.get_distribution('openfisca-tuni
 config_files_directory = os.path.join(openfisca_tunisia_data_location)
 
 
-def build_empty_budget_consommation_survey_collection(years= None):
+def build_empty_recensement_survey_collection(years= None):
 
     if years is None:
         log.error("A list of years to process is needed")
 
-    budget_consommation_survey_collection = SurveyCollection(name = "budget_consommation")
-    budget_consommation_survey_collection.set_config_files_directory(config_files_directory)
-    input_data_directory = budget_consommation_survey_collection.config.get('data', 'input_directory')
-    output_data_directory = budget_consommation_survey_collection.config.get('data', 'output_directory')
+    recensement_survey_collection = SurveyCollection(name = "recensement")
+    recensement_survey_collection.set_config_files_directory(config_files_directory)
+    input_data_directory = recensement_survey_collection.config.get('data', 'input_directory')
+    output_data_directory = recensement_survey_collection.config.get('data', 'output_directory')
 
     for year in years:
-        tables = ["budg0{}".format(i) for i in range(1, 10)] + ["budg{}".format(i) for i in range(10, 21)]
-        tables.remove("budg03")
+        tables = [
+#            "LOGMENT_ECH_{}".format(year), # TODO: produces a strange error
+            "individu_ech_{}".format(year),
+            "MENAG_ECH_{}".format(year),
+            ]
         survey_tables = dict()
         for year in years:
             for table in tables:
                 survey_tables[table] = {
-                    "stata_file": os.path.join(
+                    "spss_file": os.path.join(
                         os.path.dirname(input_data_directory),
-                        "budget_consommation",
+                        "recensement",
                         str(year),
-                        "stata",
-                        "{}.dta".format(table),
+                        "{}.sav".format(table),
                         ),
                     "year": year,
                     }
-
-            survey_name = u"budget_consommation_{}".format(year)
+            survey_name = u"recensement_{}".format(year)
             hdf5_file_path = os.path.join(
                 os.path.dirname(output_data_directory),
                 u"{}{}".format(survey_name, u".h5")
@@ -76,14 +77,15 @@ def build_empty_budget_consommation_survey_collection(years= None):
                 )
             for table, table_kwargs in survey_tables.iteritems():
                 survey.insert_table(name = table, **table_kwargs)
-            surveys = budget_consommation_survey_collection.surveys
+            surveys = recensement_survey_collection.surveys
             surveys[survey_name] = survey
 
-    return budget_consommation_survey_collection
+    return recensement_survey_collection
 
 
 if __name__ == '__main__':
-
-    budget_consommation_survey_collection = build_empty_budget_consommation_survey_collection(years = [2005])
-#    budget_consommation_survey_collection.fill_hdf_from_stata(["budget_consommation_2005"])
-    budget_consommation_survey_collection.dump(collection = "budget_consommation")
+    years = [2004]
+    recensement_survey_collection = build_empty_recensement_survey_collection(years = years)
+    for year in years:
+        recensement_survey_collection.fill_hdf_from_spss(["recensement_{}".format(year)])
+    recensement_survey_collection.dump(collection = "recensement")
